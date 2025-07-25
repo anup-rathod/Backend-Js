@@ -35,6 +35,10 @@ const videoSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "User",
     },
+    channelAvatar: {
+      type: String,
+      default: ""
+    },
   },
   {
     timestamps: true,

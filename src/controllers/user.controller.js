@@ -326,34 +326,29 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 })
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
-    const avatarLocalPath = req.file?.path
-
+    const avatarLocalPath = req.file?.path;
     if (!avatarLocalPath) {
         throw ApiError.builder()
             .setStatusCode(400)
             .setErrors(["Avatar file is missing"])
-            .build()
+            .build();
     }
-
-    const avatar = await uploadOnCloudinary(avatarLocalPath)
-
+    const avatar = await uploadOnCloudinary(avatarLocalPath);
     if (!avatar.url) {
         throw ApiError.builder()
             .setStatusCode(400)
-            .setErrors(["Error while uplaoding on avatar"])
-            .build()
+            .setErrors(["Error while uploading avatar"])
+            .build();
     }
-
     const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
             $set: {
-                coverImage: coverImage.url
+                avatar: avatar.url
             }
         },
-        {new: true}
-    ).select("-password")
-
+        { new: true }
+    ).select("-password");
     return res.status(200)
         .json(
             ApiResponse.builder()
@@ -361,7 +356,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
                 .setData(user)
                 .setMessage("Avatar image updated successfully")
                 .build()
-        )
+        );
 })
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
@@ -425,7 +420,7 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
         {
             $lookup: {
                 from: "subscriptions",
-                localfield: "_id",
+                localField: "_id",
                 foreignField: "channel",
                 as: "subscribers"
             }
@@ -433,7 +428,7 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
         {
             $lookup: {
                 from: "subscriptions",
-                localfield: "_id",
+                localField: "_id",
                 foreignField: "subscriber",
                 as: "subscribedTo"
             }
@@ -448,7 +443,7 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
                 },
                 isSubscribed: {
                     $cond: {
-                        if: {$in: [req.user?._id, "$subscribers.subscriber"]},
+                        if: { $in: [req.user?._id, "$subscribers.subscriber"] },
                         then: true,
                         else: false
                     }
@@ -462,12 +457,12 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
                 subscribersCount: 1,
                 channelsSubscribedToCount: 1,
                 isSubscribed: 1,
-                avatar: 1, 
+                avatar: 1,
                 coverImage: 1,
                 email: 1
             }
         }
-    ])
+    ]);
 
     if(!channel?.length){
         throw ApiError.builder()

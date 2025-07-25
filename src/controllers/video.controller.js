@@ -7,6 +7,7 @@ import { asyncHandler } from "../utils/asyncHandler.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
 
 
+
 const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
 
@@ -41,11 +42,20 @@ const getAllVideos = asyncHandler(async (req, res) => {
     pipeline.push({ $skip: skip });
     pipeline.push({ $limit: parseInt(limit) });
 
-    const allVideos = await Video.aggregate(pipeline);
+    // Use .find and .populate for full owner/channel avatar
+    const allVideos = await Video.find({})
+      .populate("owner", "fullName username avatar")
+      .sort({ createdAt: -1 });
 
     return res
         .status(200)
-        .json(new ApiResponse(200, allVideos, "All videos fetched"));
+        .json(
+            ApiResponse.builder()
+                .setStatusCode(200)
+                .setData(allVideos)
+                .setMessage("All videos fetched")
+                .build()
+        );
 });
 
 
@@ -59,7 +69,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
         throw ApiError.builder()
             .setStatusCode(400)
             .setErrors(["Video file and thumbnail are required"])
-            .build()
+            .build();
     }
 
     const videoFile = await uploadOnCloudinary(videoFileLocalPath);
@@ -76,24 +86,26 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
     return res
         .status(201)
-        .json(ApiResponse.builder()
-            .setStatusCode(201)
-            .setData(video)
-            .setMessage("Video uploaded successfully")
-            .build())
+        .json(
+            ApiResponse.builder()
+                .setStatusCode(201)
+                .setData(video)
+                .setMessage("Video uploaded successfully")
+                .build()
+        );
 });
 
 
 const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: get video by id
-    const video = await Video.findById(videoId).populate("owner", "username avatar");
+    const video = await Video.findById(videoId).populate("owner", "fullName username avatar");
 
     if (!video) {
         throw ApiError.builder()
             .setStatusCode(404)
             .setErrors(["Video not found"])
-            .build()
+            .build();
     }
 
     return res
@@ -103,7 +115,8 @@ const getVideoById = asyncHandler(async (req, res) => {
                 .setStatusCode(200)
                 .setData(video)
                 .setMessage("Videos fetched successfully")
-                .build())
+                .build()
+        );
 })
 
 const updateThumbnailVideo = asyncHandler(async (req, res) => {
@@ -116,7 +129,7 @@ const updateThumbnailVideo = asyncHandler(async (req, res) => {
         throw ApiError.builder()
             .setStatusCode(400)
             .setErrors(["Title and Description fields are required"])
-            .build()
+            .build();
     }
 
     // ✅ Upload new thumbnail to Cloudinary
@@ -125,7 +138,7 @@ const updateThumbnailVideo = asyncHandler(async (req, res) => {
         throw ApiError.builder()
             .setStatusCode(500)
             .setErrors(["Failed to upload thumbnail"])
-            .build()
+            .build();
     }
 
     // ✅ Update video
@@ -143,11 +156,13 @@ const updateThumbnailVideo = asyncHandler(async (req, res) => {
 
     return res
         .status(200)
-        .json(ApiResponse.builder()
-            .setStatusCode(200)
-            .setData(updatedVideo)
-            .setMessage("Updated Video Thumbnail Successfully")
-            .build())
+        .json(
+            ApiResponse.builder()
+                .setStatusCode(200)
+                .setData(updatedVideo)
+                .setMessage("Updated Video Thumbnail Successfully")
+                .build()
+        );
 });
 
 
@@ -160,16 +175,18 @@ const deleteVideo = asyncHandler(async (req, res) => {
         throw ApiError.builder()
             .setStatusCode(404)
             .setErrors(["Video not found"])
-            .build()
+            .build();
     }
 
     return res
         .status(200)
-        .json(ApiResponse.builder()
-            .setStatusCode(200)
-            .setData(deletedVideo)
-            .setMessage("Deleted Video Successfully")
-            .build())
+        .json(
+            ApiResponse.builder()
+                .setStatusCode(200)
+                .setData(deletedVideo)
+                .setMessage("Deleted Video Successfully")
+                .build()
+        );
 })
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
@@ -188,13 +205,14 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     await video.save();
 
     return res
-    .status(200)
+        .status(200)
         .json(
             ApiResponse.builder()
-            .setStatusCode(200)
-            .setData(video)
-            .setMessage("Video Publish toggle Successfully")
-            .build())
+                .setStatusCode(200)
+                .setData(video)
+                .setMessage("Video Publish toggle Successfully")
+                .build()
+        );
 })
 
 export {
@@ -205,3 +223,24 @@ export {
     deleteVideo,
     togglePublishStatus
 }
+
+// Add watchVideo endpoint
+export const watchVideo = asyncHandler(async (req, res) => {
+    const { videoId } = req.params;
+    const video = await Video.findById(videoId);
+    if (!video) {
+        throw ApiError.builder()
+            .setStatusCode(404)
+            .setErrors(["Video not found"])
+            .build();
+    }
+    video.views = (video.views || 0) + 1;
+    await video.save();
+    return res.status(200).json(
+        ApiResponse.builder()
+            .setStatusCode(200)
+            .setData(video)
+            .setMessage("Video watched and view count updated.")
+            .build()
+    );
+});

@@ -16,7 +16,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
   }
 
   const comments = await Comment.find({ video: videoId })
-    .populate("owner", "username avatar")
+    .populate("owner", "fullName username avatar")
     .sort({ createdAt: -1 })
     .skip((parseInt(page) - 1) * parseInt(limit))
     .limit(parseInt(limit));
@@ -47,24 +47,25 @@ const getVideoComments = asyncHandler(async (req, res) => {
 });
 
 const addComment = asyncHandler(async (req, res) => {
-  // TODO: add a comment to a video
-  const { comment } = req.body;
+  // Accept { content } in req.body
+  const { content } = req.body;
   const { videoId } = req.params;
 
   const userId = req.user._id;
 
-  if (!comment || !videoId) {
+  if (!content || !videoId) {
     throw ApiError.builder()
       .setStatusCode(400)
-      .setErrors(["Comment and video ID are required"])
+      .setErrors(["Content and video ID are required"])
       .build();
   }
 
   const newComment = await Comment.create({
-    content: comment,
+    content,
     video: videoId,
-    user: userId,
+    owner: userId,
   });
+  await newComment.populate("owner", "fullName username avatar");
 
   if (!newComment) {
     throw ApiError.builder()

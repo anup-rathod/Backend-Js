@@ -68,30 +68,25 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
       .build();
   }
 
-  const userPlaylists = await Playlist.aggregate([
-    {
-      $match: { owner: new mongoose.Types.ObjectId(userId) },
-    },
-    {
-      $project: {
-        name: 1,
-        description: 1,
-        createdAt: 1,
-      },
-    },
-    {
-      $sort: { createdAt: -1 }, // latest first (optional)
-    },
-  ]);
-  console.log("user playlists: ",userPlaylists);
+  const userPlaylists = await Playlist.find({ owner: userId })
+    .populate({
+      path: "videos",
+      populate: {
+        path: "owner",
+        select: "fullName username avatar"
+      }
+    })
+    .populate("owner", "fullName username avatar")
+    .sort({ createdAt: -1 });
 
-if (!userPlaylists || userPlaylists.length === 0) {
-  throw ApiError.builder()
-    .setStatusCode(404)
-    .setErrors(["No playlists found for this user."])
-    .build();
-}
+//   console.log("user playlists: ", userPlaylists);
 
+  if (!userPlaylists || userPlaylists.length === 0) {
+    throw ApiError.builder()
+      .setStatusCode(404)
+      .setErrors(["No playlists found for this user."])
+      .build();
+  }
 
   return res
     .status(200)
@@ -121,11 +116,11 @@ const playlist = await Playlist.findById(playlistId)
   .populate({
     path: "videos",
     populate: {
-      path: "owner", // nested populate
-      select: "fullName username avatar", // only pick required fields
-    },
+      path: "owner",
+      select: "fullName username avatar"
+    }
   })
-  .populate("owner", "fullName username avatar"); // playlist's owner
+  .populate("owner", "fullName username avatar");
 
 
   if (!playlist) {

@@ -37,6 +37,11 @@ router
     .delete(deleteVideo)
     .patch(upload.single("thumbnail"), updateThumbnailVideo);
 
+// Add watch endpoint
+router.patch("/:videoId/watch", (req, res, next) => {
+    import("../controllers/video.controller.js").then(mod => mod.watchVideo(req, res, next));
+});
+
 router.route("/toggle/publish/:videoId").patch(togglePublishStatus);
 
 export default router
